@@ -30,11 +30,23 @@ A fun, browser-based piano training game that listens to your microphone and giv
 
 Click **"Learn a Song"** or press **S** to open the song library:
 
+**Beginner**
 - Twinkle Twinkle Little Star
 - Mary Had a Little Lamb
 - Jingle Bells
+- Row Row Row Your Boat
+- Hot Cross Buns
+
+**Intermediate**
 - Happy Birthday
 - Ode to Joy
+- Amazing Grace
+- Old MacDonald Had a Farm
+
+**Expert**
+- Für Elise
+- Beethoven's 5th (Fate)
+- Pachelbel's Canon
 
 The app shows the exact sequence. Play the highlighted note on your piano (hold until it advances). You can also **Play Full Song** to hear the melody first.
 
