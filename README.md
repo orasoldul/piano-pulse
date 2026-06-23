@@ -1,7 +1,7 @@
 # PianoPulse 🎹
 
 <p align="center">
-  <img src="assets/screenshot.jpg" alt="PianoPulse screenshot showing the live interface with target note, virtual piano keyboard, stats, and challenge mode" width="100%">
+  <img src="assets/screenshot.png" alt="PianoPulse screenshot showing the live interface with target note, virtual piano keyboard, stats, and challenge mode" width="100%">
 </p>
 
 **➡️ [Try the live demo](https://orasoldul.github.io/piano-pulse) — no install needed, works in any modern browser**
