@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PianoPulse • Mic Piano Trainer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+    
+    :root {
+      --primary: #3b82f6;
+    }
+    
+    body {
+      font-family: 'Inter', system_ui, sans-serif;
+    }
+    
+    .title-font {
+      font-family: 'Space Grotesk', 'Inter', system_ui, sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+    }
+
+    .piano-key {
+      position: relative;
+      transition: all 0.05s ease;
+      user-select: none;
+    }
+    
+    .piano-key.white {
+      background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+      border: 1px solid #64748b;
+      box-shadow: 0 2px 3px rgba(0,0,0,0.15), inset 0 -3px 4px rgba(255,255,255,0.6), inset 0 1px 1px rgba(255,255,255,0.9);
+    }
+    
+    .piano-key.white:active, .piano-key.white.target {
+      background: linear-gradient(to bottom, #bae6fd 0%, #7dd3fc 50%, #38bdf8 100%);
+      box-shadow: 0 0 0 3px #0ea5e9, 0 2px 3px rgba(0,0,0,0.15);
+    }
+    
+    .piano-key.white.detected-good {
+      background: linear-gradient(to bottom, #86efac 0%, #4ade80 50%, #22c55e 100%);
+      box-shadow: 0 0 0 3px #16a34a, 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .piano-key.black {
+      background: linear-gradient(to bottom, #1e2937 0%, #0f172a 100%);
+      border: 1px solid #020617;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.6);
+      z-index: 10;
+    }
+    
+    .piano-key.black:active, .piano-key.black.target {
+      background: linear-gradient(to bottom, #1e40af 0%, #1e3a8a 100%);
+      box-shadow: 0 0 0 3px #3b82f6, 0 4px 6px -1px rgb(0 0 0 / 0.3);
+    }
+    
+    .piano-key.black.detected-good {
+      background: linear-gradient(to bottom, #166534 0%, #14532d 100%);
+      box-shadow: 0 0 0 3px #16a34a;
+    }
+
+    .piano-key.pressed {
+      transform: translateY(2px);
+      filter: brightness(0.75) saturate(0.9);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+    }
+    .piano-key.white.pressed {
+      background: linear-gradient(to bottom, #cbd5e1 0%, #94a3b8 50%, #64748b 100%) !important;
+    }
+    .piano-key.black.pressed {
+      background: linear-gradient(to bottom, #0f172a 0%, #020617 100%) !important;
+    }
+    
+    .piano-key .label {
+      position: absolute;
+      bottom: 4px;
+      font-size: 9px;
+      font-weight: 600;
+      text-align: center;
+      width: 100%;
+      color: #475569;
+      pointer-events: none;
+    }
+    
+    .piano-key.black .label {
+      color: #64748b;
+      bottom: 3px;
+    }
+    
+    .note-big {
+      font-size: 5.5rem;
+      line-height: 1;
+      font-weight: 700;
+      font-family: 'Space Grotesk', system_ui, sans-serif;
+      letter-spacing: -0.05em;
+    }
+    
+    .detected-note {
+      font-size: 4.25rem;
+      line-height: 1;
+      font-weight: 700;
+      font-family: 'Space Grotesk', system_ui, sans-serif;
+      letter-spacing: -0.04em;
+    }
+
+    .cents-bar {
+      height: 12px;
+      background: linear-gradient(to right, #f87171, #fbbf24, #4ade80, #fbbf24, #f87171);
+      border-radius: 9999px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .cents-marker {
+      position: absolute;
+      top: -2px;
+      width: 18px;
+      height: 18px;
+      background: white;
+      border: 3px solid #1e2937;
+      border-radius: 9999px;
+      transform: translateX(-50%);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      transition: left 60ms linear;
+    }
+
+    .match-progress {
+      transition: width 80ms linear;
+    }
+
+    .stat-value {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .game-card {
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    .piano-roll {
+      box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.3);
+    }
+
+    .success-flash {
+      animation: successPop 400ms ease-out;
+    }
+
+    @keyframes successPop {
+      0% { transform: scale(0.85); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .note-pop {
+      animation: notePop 280ms ease forwards;
+    }
+
+    .key-glow {
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5);
+    }
+
+    .song-notes-scroll {
+      -webkit-overflow-scrolling: touch;
+    }
+    .song-notes-scroll::-webkit-scrollbar {
+      height: 4px;
+    }
+    .song-notes-scroll::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 999px;
+    }
+
+    .section-header {
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .piano-container {
+      background: #0f172a;
+      padding: 12px 14px 18px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-200">
+  <div class="max-w-[1080px] mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-x-3">
+        <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30">
+          <i class="fa-solid fa-music text-3xl"></i>
+        </div>
+        <div>
+          <h1 class="title-font text-4xl font-semibold tracking-tighter">PianoPulse</h1>
+          <p class="text-slate-400 text-sm -mt-1">Mic-powered piano trainer</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-x-3">
+        <div id="mic-status"
+             class="flex items-center gap-x-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-sm">
+          <div id="mic-dot" class="w-2.5 h-2.5 bg-red-500 rounded-full"></div>
+          <span id="mic-text" class="font-medium text-slate-300">Microphone off</span>
+        </div>
+        
+        <button id="mic-btn"
+                onclick="toggleMicrophone()"
+                class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 transition-colors border border-slate-700 rounded-xl text-sm font-semibold flex items-center gap-x-2">
+          <i class="fa-solid fa-microphone"></i>
+          <span id="mic-btn-text">Enable Mic</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- Target + Detection -->
+      <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 game-card">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- TARGET -->
+          <div>
+            <div id="target-header" class="section-header mb-2 flex items-center gap-x-2">
+              <i class="fa-solid fa-bullseye"></i>
+              <span>TARGET NOTE</span>
+            </div>
+            
+            <div id="target-display" 
+                 class="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col items-center justify-center min-h-[168px]">
+              <div id="target-note" 
+                   class="note-big text-blue-400 tabular-nums font-bold tracking-[-3px]">C4</div>
+              <div id="target-label" class="text-xs uppercase tracking-[1px] text-slate-500 mt-0.5">Middle C</div>
+            </div>
+            
+            <div class="mt-3 flex gap-2">
+              <button onclick="playReferenceTone()"
+                      class="flex-1 flex items-center justify-center gap-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 transition text-sm font-semibold rounded-2xl">
+                <i class="fa-solid fa-play"></i>
+                <span>Play Reference</span>
+              </button>
+              <button onclick="newTarget()"
+                      class="flex-1 flex items-center justify-center gap-x-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold rounded-2xl">
+                <i class="fa-solid fa-random"></i>
+                <span>New Target</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- YOUR PLAYING -->
+          <div>
+            <div class="section-header mb-2 flex items-center gap-x-2">
+              <i class="fa-solid fa-headset"></i>
+              <span>WHAT YOU'RE PLAYING</span>
+            </div>
+            
+            <div id="detected-panel"
+                 class="bg-slate-950 border border-slate-800 rounded-2xl p-5 min-h-[168px] flex flex-col">
+              <div class="flex-1 flex flex-col items-center justify-center">
+                <div id="detected-note" 
+                     class="detected-note text-slate-300 tabular-nums font-bold tracking-[-2px]">--</div>
+                <div id="detected-detail" class="text-sm text-slate-400">Play a note...</div>
+              </div>
+              
+              <!-- Cents gauge -->
+              <div class="mt-auto pt-3">
+                <div class="flex justify-between text-[10px] text-slate-500 mb-1 px-0.5">
+                  <div>FLAT</div>
+                  <div class="font-medium text-slate-400">IN TUNE</div>
+                  <div>SHARP</div>
+                </div>
+                <div class="relative cents-bar w-full bg-slate-800 border border-slate-700 rounded-full">
+                  <div id="cents-marker" 
+                       class="cents-marker bg-white border-slate-950 left-1/2"
+                       style="left: 50%"></div>
+                  <div id="cents-value" 
+                       class="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-slate-300 tabular-nums">-- ¢</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+        
+        <!-- Match progress -->
+        <div class="mt-5">
+          <div class="flex items-center justify-between text-xs mb-1.5 px-1">
+            <div class="flex items-center gap-x-1.5">
+              <span class="font-semibold text-emerald-400">MATCH PROGRESS</span>
+            </div>
+            <span id="match-pct" class="tabular-nums font-medium text-emerald-400">0%</span>
+          </div>
+          <div class="h-3 bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
+            <div id="match-bar" 
+                 class="match-progress h-full w-0 bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all"
+                 style="width: 0%"></div>
+          </div>
+          <div id="match-status" class="mt-1 text-[10px] text-center text-slate-400 h-4">Hold the correct note steady</div>
+        </div>
+      </div>
+
+      <!-- Stats + Challenge -->
+      <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 game-card flex flex-col">
+        <div class="section-header mb-3">SESSION</div>
+        
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 text-center">
+            <div class="text-xs text-slate-400">SCORE</div>
+            <div id="score" class="text-3xl font-semibold tabular-nums text-blue-400 stat-value">0</div>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 text-center">
+            <div class="text-xs text-slate-400">COMBO</div>
+            <div id="combo" class="text-3xl font-semibold tabular-nums text-amber-400 stat-value">0</div>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 text-center">
+            <div class="text-xs text-slate-400">ACCURACY</div>
+            <div id="accuracy" class="text-3xl font-semibold tabular-nums text-emerald-400 stat-value">—</div>
+          </div>
+        </div>
+
+        <!-- Challenge panel -->
+        <div class="mt-auto">
+          <div class="flex items-center justify-between mb-2 px-1">
+            <div class="font-semibold text-sm">CHALLENGE</div>
+            <div id="timer" class="font-mono text-lg font-semibold text-orange-400 tabular-nums">60</div>
+          </div>
+          
+          <div class="flex gap-2">
+            <button id="challenge-btn"
+                    onclick="toggleChallenge()"
+                    class="flex-1 px-5 py-3 rounded-2xl font-bold bg-orange-500 hover:bg-orange-400 active:bg-orange-600 transition flex items-center justify-center gap-x-2 text-base">
+              <i class="fa-solid fa-stopwatch"></i>
+              <span id="challenge-btn-text">Start 60s Challenge</span>
+            </button>
+            
+            <button onclick="endChallenge(true)"
+                    id="end-challenge-btn"
+                    class="hidden px-4 py-3 bg-slate-800 hover:bg-red-900/40 border border-slate-700 rounded-2xl text-sm font-semibold">
+              END
+            </button>
+          </div>
+          
+          <div id="challenge-info" class="text-xs text-center mt-2 text-slate-400 h-4">
+            Hit as many targets as possible
+          </div>
+        </div>
+
+        <!-- Songs entry -->
+        <div class="mt-4 pt-4 border-t border-slate-800">
+          <button onclick="showSongSelector()"
+                  class="w-full flex items-center justify-center gap-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-sm font-bold rounded-2xl transition">
+            <i class="fa-solid fa-music"></i>
+            <span>Learn a Song</span>
+          </button>
+          <div class="text-[10px] text-center text-slate-500 mt-1">Follow real melodies with your mic</div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="lg:col-span-12 bg-slate-900 border border-slate-800 rounded-3xl p-5">
+        <div class="flex flex-wrap gap-x-8 gap-y-4 items-end">
+          
+          <!-- Range -->
+          <div>
+            <div class="section-header mb-1.5">NOTE RANGE</div>
+            <div class="flex gap-1 flex-wrap">
+              <button onclick="setRangePreset(0)" class="range-btn active px-3.5 py-1 rounded-xl text-xs font-medium border bg-slate-800 border-slate-700" data-preset="0">C4–C5</button>
+              <button onclick="setRangePreset(1)" class="range-btn px-3.5 py-1 rounded-xl text-xs font-medium border bg-slate-800 border-slate-700" data-preset="1">C4–C6</button>
+              <button onclick="setRangePreset(2)" class="range-btn px-3.5 py-1 rounded-xl text-xs font-medium border bg-slate-800 border-slate-700" data-preset="2">C3–C6</button>
+              <button onclick="setRangePreset(3)" class="range-btn px-3.5 py-1 rounded-xl text-xs font-medium border bg-slate-800 border-slate-700" data-preset="3">Full</button>
+            </div>
+          </div>
+
+          <!-- Tolerance -->
+          <div class="flex-1 min-w-[180px]">
+            <div class="flex justify-between items-baseline mb-1.5">
+              <div class="section-header">TOLERANCE</div>
+              <div class="text-sm"><span id="tolerance-value" class="font-semibold">25</span> ¢</div>
+            </div>
+            <input type="range" id="tolerance-slider" 
+                   class="w-full accent-blue-500" 
+                   min="8" max="50" step="1" value="25"
+                   oninput="updateTolerance()">
+          </div>
+
+          <!-- Extra toggles -->
+          <div>
+            <div class="section-header mb-1.5">OPTIONS</div>
+            <div class="flex items-center gap-x-4">
+              <label class="flex items-center gap-x-1.5 text-sm cursor-pointer">
+                <input type="checkbox" id="sharps-toggle" checked class="accent-blue-500 w-3.5 h-3.5" onchange="updateAllowedNotes()">
+                <span>Include black keys</span>
+              </label>
+              
+              <button onclick="resetSession()"
+                      class="px-3 py-1 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg">
+                Reset stats
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Piano Keyboard -->
+      <div class="lg:col-span-12">
+        <div class="section-header mb-2 px-1 flex items-center gap-x-2">
+          <span>PIANO KEYBOARD</span>
+          <span class="text-[10px] text-slate-500">(Target = blue &nbsp;•&nbsp; Correct = green)</span>
+        </div>
+        
+        <div class="piano-container" style="overflow: visible;">
+          <div id="piano" class="relative flex items-end justify-start select-none" style="min-height:112px; overflow:visible;"></div>
+        </div>
+      </div>
+
+      <!-- Live info + history -->
+      <div class="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5">
+          <div class="section-header mb-3">LIVE ANALYSIS</div>
+          <div class="grid grid-cols-3 gap-3 text-sm">
+            <div>
+              <div class="text-slate-400 text-xs">FREQUENCY</div>
+              <div id="freq-value" class="font-semibold tabular-nums text-lg">— Hz</div>
+            </div>
+            <div>
+              <div class="text-slate-400 text-xs">RMS / VOLUME</div>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                  <div id="vol-bar" class="h-2 bg-emerald-400 transition-all" style="width:0%"></div>
+                </div>
+                <div id="vol-value" class="tabular-nums w-8 text-right text-xs font-medium">0</div>
+              </div>
+            </div>
+            <div>
+              <div class="text-slate-400 text-xs">CONFIDENCE</div>
+              <div id="confidence" class="font-semibold text-lg">—</div>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-500 mt-3">Tip: Position the mic 30–60cm from the piano. Play clearly and evenly.</div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5">
+          <div class="section-header mb-3">RECENT HITS</div>
+          <div id="recent-hits" class="text-sm space-y-1 min-h-[72px]">
+            <div class="text-slate-500 text-xs">No hits yet. Start playing!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center mt-8 text-xs text-slate-500">
+      Works best in Chrome or Edge • Headphones recommended when using reference tones • 
+      <span class="cursor-pointer hover:text-slate-400" onclick="showTips()">How to get best accuracy →</span>
+    </div>
+  </div>
+
+  <!-- Challenge complete modal -->
+  <div id="modal" onclick="if (event.target.id === 'modal') hideModal()" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div onclick="event.stopImmediatePropagation()" 
+         class="bg-slate-900 border border-slate-700 rounded-3xl p-7 max-w-md w-full mx-4">
+      <div class="text-center">
+        <div class="mx-auto w-14 h-14 bg-emerald-500/10 text-emerald-400 flex items-center justify-center rounded-full mb-4">
+          <i class="fa-solid fa-trophy text-3xl"></i>
+        </div>
+        <h3 id="modal-title" class="text-2xl font-semibold">Challenge Complete!</h3>
+        <p id="modal-subtitle" class="text-slate-400 mt-1">Great job training!</p>
+      </div>
+      
+      <div class="my-6 grid grid-cols-2 gap-3 text-center">
+        <div class="bg-slate-950 border border-slate-700 rounded-2xl p-4">
+          <div class="text-emerald-400 text-sm">FINAL SCORE</div>
+          <div id="modal-score" class="text-4xl font-semibold tabular-nums">1420</div>
+        </div>
+        <div class="bg-slate-950 border border-slate-700 rounded-2xl p-4">
+          <div class="text-emerald-400 text-sm">NOTES HIT</div>
+          <div id="modal-hits" class="text-4xl font-semibold tabular-nums">18</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400">BEST COMBO</div>
+          <div id="modal-combo" class="font-semibold text-xl tabular-nums">7×</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400">AVG ERROR</div>
+          <div id="modal-error" class="font-semibold text-xl tabular-nums">14¢</div>
+        </div>
+      </div>
+      
+      <div id="modal-highscore" class="hidden text-center mb-5 text-emerald-400 text-sm font-medium"></div>
+      
+      <div class="flex gap-3">
+        <button onclick="hideModal(); startNewChallenge()" 
+                class="flex-1 py-3 font-semibold bg-orange-500 hover:bg-orange-400 rounded-2xl transition">Play Again</button>
+        <button onclick="hideModal()" 
+                class="flex-1 py-3 font-semibold bg-slate-800 hover:bg-slate-700 rounded-2xl transition border border-slate-700">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== CONFIG & STATE ====================
+    const NOTE_STRINGS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    
+    let audioContext = null;
+    let analyser = null;
+    let mediaStreamSource = null;
+    let isListening = false;
+    let rafID = null;
+    
+    let currentDetected = null;      // {midi, noteName, cents, freq, rms}
+    let stableDetectedMidi = null;
+    let stableCount = 0;
+    
+    // Game state
+    let score = 0;
+    let combo = 0;
+    let totalHits = 0;
+    let totalAttempts = 0;
+    let recentHits = [];
+    
+    let currentTargetMidi = 60; // C4
+    let allowedNotes = [];
+    let toleranceCents = 25;
+    
+    let matchTime = 0;          // milliseconds holding correct
+    let lastFrameTime = performance.now();
+    
+    let challengeActive = false;
+    let challengeTimeLeft = 60;
+    let challengeInterval = null;
+    let challengeHits = 0;
+    let challengeStartScore = 0;
+    let challengeErrors = []; // for avg error
+    
+    let highScore = parseInt(localStorage.getItem('pianoPulseHighScore') || '0');
+
+    // ==================== SONG DATA & STATE ====================
+    const SONGS = [
+      {
+        id: "twinkle",
+        title: "Twinkle Twinkle Little Star",
+        difficulty: "Beginner",
+        notes: ["C4","C4","G4","G4","A4","A4","G4","F4","F4","E4","E4","D4","D4","C4"]
+      },
+      {
+        id: "mary",
+        title: "Mary Had a Little Lamb",
+        difficulty: "Beginner",
+        notes: ["E4","D4","C4","D4","E4","E4","E4","D4","D4","D4","E4","G4","G4","E4","D4","C4","D4","E4","E4","E4","E4","D4","D4","E4","D4","C4"]
+      },
+      {
+        id: "jingle",
+        title: "Jingle Bells",
+        difficulty: "Beginner",
+        notes: ["E4","E4","E4","E4","E4","E4","E4","G4","C4","D4","E4","F4","F4","F4","F4","F4","E4","E4","E4","E4","D4","D4","E4","D4","G4"]
+      },
+      {
+        id: "birthday",
+        title: "Happy Birthday",
+        difficulty: "Intermediate",
+        notes: ["C4","C4","D4","C4","F4","E4","C4","C4","D4","C4","G4","F4","C4","C4","C5","A4","F4","E4","D4","Bb4","Bb4","A4","F4","G4","F4"]
+      },
+      {
+        id: "ode",
+        title: "Ode to Joy",
+        difficulty: "Intermediate",
+        notes: ["E4","E4","F4","G4","G4","F4","E4","D4","C4","C4","D4","E4","E4","D4","D4","E4","E4","F4","G4","G4","F4","E4","D4","C4","C4","D4","E4","D4","C4","C4"]
+      }
+    ];
+
+    let songMode = false;
+    let currentSong = null;
+    let songNotes = [];       // array of MIDI numbers
+    let songIndex = 0;
+    let songMistakes = 0;
+    let songStartTime = 0;
+    let songCompleted = [];   // array of completed song ids (for future)
+
+    let isPlayingReference = false;  // prevents mic from counting computer playback
+    
+    const pianoElement = document.getElementById('piano');
+    let pianoKeys = {}; // midi -> element
+    
+    // ==================== UTILS ====================
+    function noteFromPitch(frequency) {
+      const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+      return Math.round(noteNum) + 69;
+    }
+    
+    function frequencyFromNoteNumber(note) {
+      return 440 * Math.pow(2, (note - 69) / 12);
+    }
+    
+    function centsOffFromPitch(frequency, note) {
+      return 1200 * Math.log(frequency / frequencyFromNoteNumber(note)) / Math.log(2);
+    }
+    
+    function getNoteName(midi) {
+      return NOTE_STRINGS[midi % 12] + (Math.floor(midi / 12) - 1);
+    }
+    
+    function getMidiFromName(name) {
+      const octave = parseInt(name.slice(-1));
+      const letter = name.slice(0, -1);
+      const idx = NOTE_STRINGS.indexOf(letter);
+      if (idx === -1) return null;
+      return (octave + 1) * 12 + idx;
+    }
+
+    function noteNameToMidi(name) {
+      return getMidiFromName(name);
+    }
+    
+    // ==================== PITCH DETECTION (from cwilso/PitchDetect) ====================
+    const BUFLEN = 2048;
+    let buf = new Float32Array(BUFLEN);
+    
+    function autoCorrelate(buf, sampleRate) {
+      const SIZE = buf.length;
+      let rms = 0;
+      
+      for (let i = 0; i < SIZE; i++) {
+        const val = buf[i];
+        rms += val * val;
+      }
+      rms = Math.sqrt(rms / SIZE);
+      if (rms < 0.01) return -1; // too quiet
+      
+      let r1 = 0, r2 = SIZE - 1;
+      const thres = 0.2;
+      
+      for (let i = 0; i < SIZE / 2; i++) {
+        if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+      }
+      for (let i = 1; i < SIZE / 2; i++) {
+        if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+      }
+      
+      buf = buf.slice(r1, r2);
+      const newSize = buf.length;
+      
+      const c = new Array(newSize).fill(0);
+      for (let i = 0; i < newSize; i++) {
+        for (let j = 0; j < newSize - i; j++) {
+          c[i] = c[i] + buf[j] * buf[j + i];
+        }
+      }
+      
+      let d = 0;
+      while (c[d] > c[d + 1]) d++;
+      
+      let maxval = -1, maxpos = -1;
+      for (let i = d; i < newSize; i++) {
+        if (c[i] > maxval) {
+          maxval = c[i];
+          maxpos = i;
+        }
+      }
+      
+      let T0 = maxpos;
+      const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
+      const a = (x1 + x3 - 2 * x2) / 2;
+      const b = (x3 - x1) / 2;
+      if (a) T0 = T0 - b / (2 * a);
+      
+      return sampleRate / T0;
+    }
+    
+    // ==================== AUDIO SETUP ====================
+    async function toggleMicrophone() {
+      if (isListening) {
+        stopListening();
+        return;
+      }
+      
+      try {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            sampleRate: 44100
+          }
+        });
+        
+        mediaStreamSource = audioContext.createMediaStreamSource(stream);
+        
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.6;
+        mediaStreamSource.connect(analyser);
+        
+        isListening = true;
+        updateMicUI(true);
+        
+        // Start processing loop
+        lastFrameTime = performance.now();
+        updatePitchLoop();
+        
+      } catch (err) {
+        console.error(err);
+        alert("Microphone access failed. Please allow mic permissions and try again.\n\nTip: Use Chrome or Edge.");
+        updateMicUI(false);
+      }
+    }
+    
+    function stopListening() {
+      isListening = false;
+      
+      if (rafID) {
+        cancelAnimationFrame(rafID);
+        rafID = null;
+      }
+      
+      if (mediaStreamSource) {
+        mediaStreamSource.disconnect();
+        mediaStreamSource = null;
+      }
+      
+      if (analyser) analyser = null;
+      
+      updateMicUI(false);
+      clearDetectedDisplay();
+    }
+    
+    function updateMicUI(listening) {
+      const dot = document.getElementById('mic-dot');
+      const text = document.getElementById('mic-text');
+      const btnText = document.getElementById('mic-btn-text');
+      
+      if (listening) {
+        dot.className = 'w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse';
+        text.textContent = 'Listening';
+        btnText.textContent = 'Stop Mic';
+        document.getElementById('mic-btn').classList.add('!bg-red-900/50', '!border-red-800');
+      } else {
+        dot.className = 'w-2.5 h-2.5 bg-red-500 rounded-full';
+        text.textContent = 'Microphone off';
+        btnText.textContent = 'Enable Mic';
+        document.getElementById('mic-btn').classList.remove('!bg-red-900/50', '!border-red-800');
+      }
+    }
+    
+    function clearDetectedDisplay() {
+      document.getElementById('detected-note').textContent = '--';
+      document.getElementById('detected-note').className = 'detected-note text-slate-300 tabular-nums font-bold tracking-[-2px]';
+      document.getElementById('detected-detail').textContent = 'Play a note...';
+      document.getElementById('cents-marker').style.left = '50%';
+      document.getElementById('cents-value').textContent = '-- ¢';
+      document.getElementById('freq-value').textContent = '— Hz';
+      document.getElementById('vol-bar').style.width = '0%';
+      document.getElementById('vol-value').textContent = '0';
+      document.getElementById('confidence').textContent = '—';
+      
+      updateKeyboard(null, false);
+    }
+    
+    // ==================== PITCH PROCESSING LOOP ====================
+    function updatePitchLoop() {
+      if (!isListening || !analyser) return;
+      
+      const now = performance.now();
+      const dt = now - lastFrameTime;
+      lastFrameTime = now;
+      
+      analyser.getFloatTimeDomainData(buf);
+      const ac = autoCorrelate(buf, audioContext.sampleRate);
+      
+      let detected = null;
+      
+      if (ac > 0) {
+        const midi = noteFromPitch(ac);
+        const cents = centsOffFromPitch(ac, midi);
+        const noteName = getNoteName(midi);
+        const rms = computeRMS(buf);
+        
+        // Basic range filter (ignore extreme values)
+        if (ac > 75 && ac < 2400) {
+          detected = {
+            midi: midi,
+            noteName: noteName,
+            cents: Math.round(cents),
+            freq: Math.round(ac),
+            rms: rms
+          };
+        }
+      }
+      
+      // Stability smoothing (requires 3 consistent frames)
+      if (detected) {
+        if (stableDetectedMidi === detected.midi) {
+          stableCount++;
+        } else {
+          stableDetectedMidi = detected.midi;
+          stableCount = 1;
+        }
+        
+        if (stableCount >= 2) {
+          currentDetected = detected;
+        }
+      } else {
+        stableCount = 0;
+        if (stableDetectedMidi !== null) {
+          // allow occasional dropouts
+          stableCount = 0;
+        }
+      }
+      
+      // Render live UI
+      renderLiveDetection(currentDetected, ac);
+      
+      // Update game logic if running
+      if (currentDetected) {
+        updateGameLogic(dt);
+      } else {
+        // decay match if silent
+        if (matchTime > 0) {
+          matchTime = Math.max(0, matchTime - dt * 3);
+          updateMatchUI();
+        }
+      }
+      
+      updateKeyboard(currentDetected ? currentDetected.midi : null, isMatchGood());
+      
+      rafID = requestAnimationFrame(updatePitchLoop);
+    }
+    
+    function computeRMS(buffer) {
+      let sum = 0;
+      for (let i = 0; i < buffer.length; i++) {
+        sum += buffer[i] * buffer[i];
+      }
+      return Math.sqrt(sum / buffer.length);
+    }
+    
+    function renderLiveDetection(det, rawAc) {
+      const noteEl = document.getElementById('detected-note');
+      const detailEl = document.getElementById('detected-detail');
+      const marker = document.getElementById('cents-marker');
+      const centsVal = document.getElementById('cents-value');
+      const freqEl = document.getElementById('freq-value');
+      const volBar = document.getElementById('vol-bar');
+      const volVal = document.getElementById('vol-value');
+      const confEl = document.getElementById('confidence');
+      
+      if (isPlayingReference) {
+        noteEl.textContent = '♪';
+        noteEl.className = 'detected-note text-blue-400 tabular-nums font-bold tracking-[-2px]';
+        detailEl.textContent = 'Reference playing (mic paused)';
+        marker.style.left = '50%';
+        centsVal.textContent = '--';
+        freqEl.textContent = '— Hz';
+        volBar.style.width = '0%';
+        volVal.textContent = '0';
+        confEl.textContent = '—';
+        return;
+      }
+      
+      if (!det) {
+        noteEl.textContent = '--';
+        noteEl.className = 'detected-note text-slate-300 tabular-nums font-bold tracking-[-2px]';
+        detailEl.textContent = isListening ? 'Listening...' : 'Play a note...';
+        marker.style.left = '50%';
+        centsVal.textContent = '-- ¢';
+        freqEl.textContent = '— Hz';
+        volBar.style.width = '0%';
+        volVal.textContent = '0';
+        confEl.textContent = '—';
+        return;
+      }
+      
+      // Note
+      noteEl.textContent = det.noteName;
+      const isGood = Math.abs(det.cents) <= toleranceCents;
+      noteEl.className = isGood 
+        ? 'detected-note text-emerald-400 tabular-nums font-bold tracking-[-2px]' 
+        : (det.cents < 0 ? 'detected-note text-amber-400' : 'detected-note text-rose-400');
+      
+      // Detail
+      const direction = det.cents > 0 ? 'sharp' : (det.cents < 0 ? 'flat' : '');
+      detailEl.innerHTML = `${det.freq} Hz &nbsp;•&nbsp; <span class="font-medium">${Math.abs(det.cents)}¢ ${direction}</span>`;
+      
+      // Cents gauge
+      const displayCents = Math.max(-50, Math.min(50, det.cents));
+      const percent = ((displayCents + 50) / 100) * 100;
+      marker.style.left = `${percent}%`;
+      
+      centsVal.textContent = `${det.cents} ¢`;
+      centsVal.style.color = isGood ? '#4ade80' : (Math.abs(det.cents) < 35 ? '#facc15' : '#f87171');
+      
+      // Freq
+      freqEl.textContent = `${det.freq} Hz`;
+      
+      // Volume
+      const volPct = Math.min(100, Math.round(det.rms * 420));
+      volBar.style.width = `${volPct}%`;
+      volVal.textContent = volPct;
+      
+      // Simple confidence proxy
+      const conf = Math.max(0, Math.min(100, Math.round((1 - Math.abs(det.cents) / 60) * 100)));
+      confEl.textContent = conf + '%';
+    }
+    
+    function isMatchGood() {
+      if (!currentDetected || !currentTargetMidi) return false;
+      return currentDetected.midi === currentTargetMidi && 
+             Math.abs(currentDetected.cents) <= toleranceCents;
+    }
+    
+    // ==================== GAME LOGIC ====================
+    function updateGameLogic(dt) {
+      if (!currentDetected || isPlayingReference) {
+        // Ignore microphone input while we are playing reference tones
+        // (prevents computer speakers from being detected as the user playing)
+        return;
+      }
+      
+      const good = isMatchGood();
+      
+      if (good) {
+        matchTime += dt;
+        
+        // Award points continuously for holding good tone
+        const accuracyBonus = 1 - (Math.abs(currentDetected.cents) / (toleranceCents * 1.6));
+        const points = Math.max(3, Math.floor(dt * 0.16 * (0.6 + accuracyBonus * 1.4)));
+        score += points;
+        
+        if (challengeActive) {
+          // track error samples
+          if (Math.random() < 0.3) challengeErrors.push(Math.abs(currentDetected.cents));
+        }
+        
+        // Success threshold ~420ms
+        if (matchTime >= 420) {
+          handleSuccessfulMatch();
+        }
+      } else {
+        // Decay faster on bad note
+        matchTime = Math.max(0, matchTime - dt * 2.6);
+        
+        // Song mode: count mistakes when user plays the wrong note
+        if (songMode && currentDetected && currentDetected.midi !== currentTargetMidi) {
+          // Only count occasional mistakes to avoid spamming on bad detection
+          if (Math.random() < 0.08) {
+            songMistakes++;
+          }
+        }
+        
+        // If playing a clearly wrong note, reset combo
+        if (currentDetected.midi !== currentTargetMidi && combo > 0) {
+          if (Math.abs(currentDetected.cents) < 50) {
+            // user played something close but not target — light penalty
+            combo = Math.max(0, combo - 1);
+          } else {
+            combo = 0;
+          }
+        }
+      }
+      
+      updateMatchUI();
+      updateStatsUI();
+    }
+    
+    function handleSuccessfulMatch() {
+      totalHits++;
+      totalAttempts++; // since this was a successful attempt
+      challengeHits++;
+      
+      const centsError = currentDetected ? Math.abs(currentDetected.cents) : 0;
+      const base = 120;
+      const accuracyBonus = Math.round((1 - centsError / 60) * 80);
+      const comboBonus = combo * 12;
+      
+      const gained = base + accuracyBonus + comboBonus;
+      score += gained;
+      
+      combo++;
+      
+      // Record recent hit
+      recentHits.unshift({
+        note: getNoteName(currentTargetMidi),
+        cents: currentDetected ? currentDetected.cents : 0,
+        gained: gained
+      });
+      if (recentHits.length > 5) recentHits.pop();
+      
+      renderRecentHits();
+      
+      // Flash success
+      const targetDisplay = document.getElementById('target-display');
+      targetDisplay.classList.add('success-flash');
+      setTimeout(() => targetDisplay.classList.remove('success-flash'), 420);
+      
+      // Play success sound
+      playSuccessSound();
+      
+      if (songMode) {
+        // Advance the song instead of random target
+        advanceInSong();
+        return;
+      }
+      
+      // Normal practice / challenge behavior
+      const oldTarget = currentTargetMidi;
+      pickNewTarget();
+      
+      // Reset match progress for new target
+      matchTime = 0;
+      
+      // Update stats
+      updateStatsUI();
+      
+      // In challenge mode, encourage speed
+      if (challengeActive) {
+        // Small bonus for fast completion
+        score += Math.max(0, Math.floor(15 * (combo / 2)));
+      }
+    }
+    
+    function updateMatchUI() {
+      const pct = Math.min(100, Math.round((matchTime / 420) * 100));
+      document.getElementById('match-bar').style.width = `${pct}%`;
+      document.getElementById('match-pct').textContent = pct + '%';
+      
+      const status = document.getElementById('match-status');
+      if (!status) return;
+
+      if (isPlayingReference) {
+        // Status is controlled by the playback functions
+        return;
+      }
+      
+      if (pct >= 100) {
+        status.textContent = songMode ? 'Great! Next note...' : 'Perfect! Advancing...';
+        status.className = 'mt-1 text-[10px] text-center text-emerald-400 font-medium';
+      } else if (pct > 45) {
+        status.textContent = 'Hold it...';
+        status.className = 'mt-1 text-[10px] text-center text-emerald-400';
+      } else if (pct > 0) {
+        status.textContent = 'Almost there...';
+        status.className = 'mt-1 text-[10px] text-center text-emerald-300';
+      } else {
+        status.textContent = songMode ? 'Play the highlighted song note' : 'Hold the correct note steady';
+        status.className = 'mt-1 text-[10px] text-center text-slate-400';
+      }
+    }
+    
+    function updateStatsUI() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('combo').textContent = combo + '×';
+      
+      const accEl = document.getElementById('accuracy');
+      if (totalHits > 0) {
+        const acc = Math.round((totalHits / Math.max(totalAttempts, totalHits)) * 100);
+        accEl.textContent = acc + '%';
+      } else {
+        accEl.textContent = '—';
+      }
+    }
+    
+    function renderRecentHits() {
+      const container = document.getElementById('recent-hits');
+      if (!recentHits.length) {
+        container.innerHTML = `<div class="text-slate-500 text-xs">No hits yet. Start playing!</div>`;
+        return;
+      }
+      
+      container.innerHTML = recentHits.map(h => {
+        const good = Math.abs(h.cents) <= 15;
+        return `
+          <div class="flex items-center justify-between px-2 py-0.5 rounded-lg bg-slate-950/60">
+            <div class="flex items-center gap-x-2">
+              <span class="font-semibold tabular-nums w-10 ${good ? 'text-emerald-400' : 'text-amber-400'}">${h.note}</span>
+              <span class="text-xs text-slate-400">${h.cents}¢</span>
+            </div>
+            <span class="text-emerald-400 font-medium tabular-nums text-xs">+${h.gained}</span>
+          </div>`;
+      }).join('');
+    }
+    
+    function updateTolerance() {
+      toleranceCents = parseInt(document.getElementById('tolerance-slider').value);
+      document.getElementById('tolerance-value').textContent = toleranceCents;
+    }
+    
+    function setRangePreset(preset) {
+      // Clear active styles
+      document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('!bg-blue-600', '!border-blue-600', 'active'));
+      
+      let minMidi, maxMidi;
+      
+      if (preset === 0) { minMidi = 60; maxMidi = 72; } // C4–C5
+      else if (preset === 1) { minMidi = 60; maxMidi = 84; } // C4–C6
+      else if (preset === 2) { minMidi = 48; maxMidi = 84; } // C3–C6
+      else { minMidi = 45; maxMidi = 88; } // Full-ish
+      
+      allowedNotes = [];
+      const includeSharps = document.getElementById('sharps-toggle').checked;
+      
+      for (let m = minMidi; m <= maxMidi; m++) {
+        const isSharp = NOTE_STRINGS[m % 12].includes('#');
+        if (!includeSharps && isSharp) continue;
+        allowedNotes.push(m);
+      }
+      
+      // activate button
+      const btns = document.querySelectorAll('.range-btn');
+      if (btns[preset]) btns[preset].classList.add('!bg-blue-600', '!border-blue-600', 'active');
+      
+      // Update current target if it's no longer allowed
+      if (!songMode && !allowedNotes.includes(currentTargetMidi)) {
+        pickNewTarget();
+      } else {
+        updateKeyboard(null, false); // refresh highlights
+      }
+    }
+    
+    function updateAllowedNotes() {
+      // Rebuild allowed notes using current range buttons
+      const activeBtn = document.querySelector('.range-btn.active') || document.querySelector('.range-btn');
+      const preset = activeBtn ? parseInt(activeBtn.getAttribute('data-preset') || '1') : 1;
+      
+      // re-apply preset
+      let minMidi, maxMidi;
+      if (preset === 0) { minMidi=60; maxMidi=72; }
+      else if (preset === 1) { minMidi=60; maxMidi=84; }
+      else if (preset === 2) { minMidi=48; maxMidi=84; }
+      else { minMidi=45; maxMidi=88; }
+      
+      allowedNotes = [];
+      const includeSharps = document.getElementById('sharps-toggle').checked;
+      
+      for (let m = minMidi; m <= maxMidi; m++) {
+        const isSharp = NOTE_STRINGS[m % 12].includes('#');
+        if (!includeSharps && isSharp) continue;
+        allowedNotes.push(m);
+      }
+      
+      if (!songMode && !allowedNotes.includes(currentTargetMidi)) {
+        pickNewTarget();
+      }
+    }
+    
+    function pickNewTarget() {
+      if (songMode) return; // songs control the target
+      
+      if (!allowedNotes.length) {
+        // fallback
+        allowedNotes = [60, 62, 64, 65, 67, 69, 71, 72];
+      }
+      
+      let next = currentTargetMidi;
+      // Prefer different note
+      for (let i = 0; i < 6; i++) {
+        next = allowedNotes[Math.floor(Math.random() * allowedNotes.length)];
+        if (next !== currentTargetMidi) break;
+      }
+      
+      currentTargetMidi = next;
+      updateTargetUI();
+      updateKeyboard(null, false);
+      
+      // Reset progress bar for new target
+      matchTime = 0;
+      updateMatchUI();
+    }
+    
+    function newTarget() {
+      if (songMode) {
+        // In song mode we don't pick random
+        return;
+      }
+      pickNewTarget();
+    }
+    
+    function updateTargetUI() {
+      const noteEl = document.getElementById('target-note');
+      const labelEl = document.getElementById('target-label');
+      
+      // Update section header based on mode
+      const targetHeader = document.getElementById('target-header');
+      if (targetHeader) {
+        if (songMode) {
+          targetHeader.innerHTML = `<i class="fa-solid fa-music"></i> <span>CURRENT SONG NOTE</span>`;
+        } else {
+          targetHeader.innerHTML = `<i class="fa-solid fa-bullseye"></i> <span>TARGET NOTE</span>`;
+        }
+      }
+      
+      noteEl.textContent = getNoteName(currentTargetMidi);
+      
+      if (songMode && currentSong) {
+        labelEl.textContent = `Song • ${songIndex + 1}/${songNotes.length}`;
+        labelEl.className = 'text-xs uppercase tracking-[1px] text-blue-400 mt-0.5';
+      } else {
+        labelEl.className = 'text-xs uppercase tracking-[1px] text-slate-500 mt-0.5';
+        
+        // Nice label
+        const midi = currentTargetMidi;
+        let label = '';
+        if (midi === 60) label = 'Middle C';
+        else if (midi === 72) label = 'C above middle';
+        else if (midi < 60) label = 'Lower register';
+        else if (midi > 72) label = 'Higher register';
+        else label = '';
+        
+        labelEl.textContent = label || getNoteName(currentTargetMidi);
+      }
+      
+      // Keyboard update
+      updateKeyboard(currentDetected ? currentDetected.midi : null, isMatchGood());
+    }
+
+    // ==================== SONG MODE ====================
+    function startSong(songId) {
+      const song = SONGS.find(s => s.id === songId);
+      if (!song) return;
+
+      // Make sure mic is on
+      if (!isListening) {
+        toggleMicrophone().then(() => {
+          setTimeout(() => startSong(songId), 700);
+        });
+        return;
+      }
+
+      // Initialize song state
+      currentSong = song;
+      songNotes = song.notes.map(n => noteNameToMidi(n)).filter(Boolean);
+      songIndex = 0;
+      songMistakes = 0;
+      songMode = true;
+      songStartTime = Date.now();
+
+      // Set the first target
+      if (songNotes.length > 0) {
+        currentTargetMidi = songNotes[0];
+      }
+
+      // Update UI
+      updateSongUI();
+      updateTargetUI();
+      updateKeyboard(null, false);
+      matchTime = 0;
+      updateMatchUI();
+
+      // Hide some practice elements during song
+      document.getElementById('challenge-btn').classList.add('opacity-50', 'pointer-events-none');
+    }
+
+    function advanceInSong() {
+      if (!songMode || !currentSong) return;
+
+      const wasLast = songIndex >= songNotes.length - 1;
+
+      songIndex++;
+
+      if (wasLast) {
+        // Song complete!
+        completeSong();
+        return;
+      }
+
+      // Advance target
+      currentTargetMidi = songNotes[songIndex];
+      matchTime = 0;
+
+      updateTargetUI();
+      updateSongUI();
+      updateMatchUI();
+      updateKeyboard(currentDetected ? currentDetected.midi : null, false);
+    }
+
+    function completeSong() {
+      const duration = Math.round((Date.now() - songStartTime) / 1000);
+      const totalNotes = songNotes.length;
+      const correct = totalNotes - songMistakes;   // rough since we count advances
+      const accuracy = totalNotes > 0 ? Math.round((correct / totalNotes) * 100) : 100;
+
+      // Award big score bonus
+      const bonus = Math.round(300 + (accuracy * 2) + (combo * 5));
+      score += bonus;
+
+      // Record completion
+      if (!songCompleted.includes(currentSong.id)) {
+        songCompleted.push(currentSong.id);
+      }
+
+      updateStatsUI();
+
+      // Show nice completion modal
+      showSongCompleteModal(currentSong.title, accuracy, totalNotes, duration, bonus);
+
+      // Exit song mode
+      exitSongMode(false);
+    }
+
+    function exitSongMode(resetStats = true) {
+      songMode = false;
+      currentSong = null;
+      songNotes = [];
+      songIndex = 0;
+
+      document.getElementById('challenge-btn').classList.remove('opacity-50', 'pointer-events-none');
+
+      // Clean up song-specific UI
+      const songUI = document.getElementById('song-ui');
+      if (songUI) songUI.classList.add('hidden');
+
+      // Restore normal target label
+      document.getElementById('target-label').textContent = 'Middle C';
+
+      if (resetStats) {
+        // optional soft reset
+      }
+
+      // Pick a normal random target to return to practice
+      pickNewTarget();
+      matchTime = 0;
+      updateMatchUI();
+    }
+
+    function updateSongUI() {
+      let container = document.getElementById('song-ui');
+      if (!container) {
+        // Create song UI container if it doesn't exist
+        const targetSection = document.getElementById('target-display').parentElement;
+        container = document.createElement('div');
+        container.id = 'song-ui';
+        container.className = 'mt-4 bg-slate-950 border border-blue-800/60 rounded-2xl p-4';
+        targetSection.appendChild(container);
+      }
+
+      if (!songMode || !currentSong) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      const progress = Math.round(((songIndex) / Math.max(1, songNotes.length)) * 100);
+      const currentNoteName = getNoteName(currentTargetMidi);
+
+      let html = `
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <span class="font-semibold text-blue-400">${currentSong.title}</span>
+            <span class="ml-2 text-xs px-2 py-0.5 bg-blue-900/40 text-blue-300 rounded-full">${currentSong.difficulty}</span>
+          </div>
+          <div class="text-sm tabular-nums font-medium text-blue-300">${songIndex + 1} / ${songNotes.length}</div>
+        </div>
+
+        <div class="h-2 bg-slate-800 rounded-full overflow-hidden mb-3">
+          <div class="h-2 bg-blue-500 transition-all" style="width: ${progress}%"></div>
+        </div>
+
+        <!-- Note sequence -->
+        <div class="flex gap-1 overflow-x-auto pb-2 song-notes-scroll" style="scrollbar-width: thin;">
+      `;
+
+      songNotes.forEach((midi, i) => {
+        const name = getNoteName(midi);
+        const isCurrent = i === songIndex;
+        const isPast = i < songIndex;
+        
+        let classes = 'px-2.5 py-1 text-xs font-semibold rounded-lg border flex-shrink-0 tabular-nums ';
+        if (isCurrent) {
+          classes += 'bg-blue-500 text-white border-blue-400 scale-105 shadow';
+        } else if (isPast) {
+          classes += 'bg-emerald-900/60 text-emerald-300 border-emerald-800 line-through opacity-60';
+        } else {
+          classes += 'bg-slate-800 text-slate-300 border-slate-700';
+        }
+
+        html += `<div class="${classes}" onclick="jumpToSongNote(${i})">${name}</div>`;
+      });
+
+      html += `</div>
+        <div class="flex gap-2 mt-3">
+          <button onclick="playSongMelody()" 
+                  class="flex-1 px-3 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-500 rounded-xl flex items-center justify-center gap-x-2">
+            <i class="fa-solid fa-play"></i>
+            <span>Play Full Song</span>
+          </button>
+          <button onclick="restartSong()" 
+                  class="px-3 py-2 text-sm font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center gap-x-1.5">
+            <i class="fa-solid fa-undo"></i>
+            <span>Restart</span>
+          </button>
+          <button onclick="exitSongMode()" 
+                  class="px-3 py-2 text-sm font-semibold bg-slate-800 hover:bg-red-900/30 border border-slate-700 rounded-xl">
+            Exit
+          </button>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function jumpToSongNote(index) {
+      if (!songMode || index < 0 || index >= songNotes.length) return;
+      songIndex = index;
+      currentTargetMidi = songNotes[songIndex];
+      matchTime = 0;
+      updateTargetUI();
+      updateSongUI();
+      updateMatchUI();
+    }
+
+    function restartSong() {
+      if (!songMode || !currentSong) return;
+      songIndex = 0;
+      songMistakes = 0;
+      currentTargetMidi = songNotes[0];
+      matchTime = 0;
+      updateTargetUI();
+      updateSongUI();
+      updateMatchUI();
+      updateKeyboard(null, false);
+    }
+
+    async function playSongMelody() {
+      if (!currentSong || !songNotes.length) return;
+      if (isPlayingReference) return; // already playing a reference
+
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      isPlayingReference = true;
+
+      // Reset any in-progress match so nothing carries over
+      matchTime = 0;
+      updateMatchUI();
+
+      // Optional: update status text
+      const statusEl = document.getElementById('match-status');
+      const originalStatus = statusEl ? statusEl.textContent : '';
+
+      const notesToPlay = [...songNotes];
+      const noteDuration = 420;
+
+      for (let i = 0; i < notesToPlay.length; i++) {
+        // Use the shared playNote
+        playNote(notesToPlay[i], noteDuration);
+
+        // Highlight on keyboard and song UI while playing
+        const originalTarget = currentTargetMidi;
+        currentTargetMidi = notesToPlay[i];
+        updateKeyboard(null, false);
+        updateSongUI();
+
+        // Show clear feedback that we're playing reference
+        if (statusEl) {
+          statusEl.textContent = `Playing reference... (${i + 1}/${notesToPlay.length})`;
+          statusEl.className = 'mt-1 text-[10px] text-center text-blue-400';
+        }
+
+        await new Promise(resolve => setTimeout(resolve, noteDuration * 0.85));
+        
+        // Restore if user hasn't changed song
+        if (songMode && currentSong) {
+          currentTargetMidi = originalTarget;
+        }
+      }
+
+      // End reference mode
+      isPlayingReference = false;
+
+      // Restore the actual current note after playback
+      if (songMode && currentSong && songNotes[songIndex]) {
+        currentTargetMidi = songNotes[songIndex];
+        updateTargetUI();
+        updateSongUI();
+        updateKeyboard(currentDetected ? currentDetected.midi : null, isMatchGood());
+      }
+
+      // Reset match progress so user starts fresh
+      matchTime = 0;
+      updateMatchUI();
+
+      if (statusEl) {
+        statusEl.textContent = 'Play the highlighted song note';
+        statusEl.className = 'mt-1 text-[10px] text-center text-slate-400';
+      }
+    }
+
+    function showSongCompleteModal(title, accuracy, totalNotes, durationSec, bonus) {
+      const modal = document.getElementById('modal');
+      if (!modal) return;
+
+      // Save original content the first time
+      if (!originalModalHTML) {
+        const card = modal.querySelector('.bg-slate-900');
+        if (card) originalModalHTML = card.innerHTML;
+      }
+
+      modal.classList.remove('hidden');
+
+      // Use a fresh card content for song complete
+      const card = modal.querySelector('.bg-slate-900');
+      if (card) {
+        card.innerHTML = `
+          <div class="text-center">
+            <div class="mx-auto w-14 h-14 bg-emerald-500/10 text-emerald-400 flex items-center justify-center rounded-full mb-4">
+              <i class="fa-solid fa-music text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-semibold">Song Complete!</h3>
+            <p class="text-slate-400 mt-1">${title}</p>
+          </div>
+          
+          <div class="my-6 grid grid-cols-2 gap-3 text-center">
+            <div class="bg-slate-950 border border-slate-700 rounded-2xl p-4">
+              <div class="text-emerald-400 text-sm">ACCURACY</div>
+              <div class="text-4xl font-semibold tabular-nums">${accuracy}<span class="text-xl">%</span></div>
+            </div>
+            <div class="bg-slate-950 border border-slate-700 rounded-2xl p-4">
+              <div class="text-emerald-400 text-sm">NOTES</div>
+              <div class="text-4xl font-semibold tabular-nums">${totalNotes}</div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400">TIME</div>
+              <div class="font-semibold text-xl tabular-nums">${durationSec}s</div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400">BONUS</div>
+              <div class="font-semibold text-xl text-blue-400 tabular-nums">+${bonus}</div>
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <button onclick="hideModal(); restartSongFromModal()" 
+                    class="flex-1 py-3 font-semibold bg-blue-600 hover:bg-blue-500 rounded-2xl transition">Play Again</button>
+            <button onclick="hideModal(); showSongSelector()" 
+                    class="flex-1 py-3 font-semibold bg-slate-800 hover:bg-slate-700 rounded-2xl transition border border-slate-700">Choose Another Song</button>
+          </div>
+        `;
+      }
+    }
+
+    function restartSongFromModal() {
+      const modal = document.getElementById('modal');
+      modal.classList.add('hidden');
+      if (currentSong) {
+        const id = currentSong.id;
+        exitSongMode(true);
+        setTimeout(() => startSong(id), 150);
+      }
+    }
+
+    function showSongSelector() {
+      // Hide modal if open
+      const modal = document.getElementById('modal');
+      if (modal) modal.classList.add('hidden');
+
+      // Create or show an inline song selector
+      let selector = document.getElementById('song-selector');
+      if (!selector) {
+        selector = document.createElement('div');
+        selector.id = 'song-selector';
+        selector.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[60]';
+        document.body.appendChild(selector);
+      }
+
+      let html = `
+        <div onclick="event.target.remove()" class="absolute inset-0"></div>
+        <div onclick="event.stopImmediatePropagation()" class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-2xl w-full mx-4 relative">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="text-2xl font-semibold">Choose a Song</h3>
+              <p class="text-sm text-slate-400">Play along with real melodies using your mic</p>
+            </div>
+            <button onclick="document.getElementById('song-selector').remove()" class="text-slate-400 hover:text-white">✕</button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      `;
+
+      SONGS.forEach(song => {
+        const completed = songCompleted.includes(song.id) ? '<span class="text-emerald-400 text-xs">✓ Completed</span>' : '';
+        html += `
+          <div onclick="document.getElementById('song-selector').remove(); startSong('${song.id}')" 
+               class="cursor-pointer bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-blue-600 transition rounded-2xl p-4">
+            <div class="font-semibold">${song.title}</div>
+            <div class="flex justify-between text-sm mt-1">
+              <span class="text-slate-400">${song.difficulty}</span>
+              ${completed}
+            </div>
+            <div class="mt-2 text-xs text-blue-400">Click to start →</div>
+          </div>
+        `;
+      });
+
+      html += `</div></div>`;
+      selector.innerHTML = html;
+    }
+
+    // ==================== KEYBOARD RENDER ====================
+    function buildPianoKeyboard() {
+      pianoElement.innerHTML = '';
+      pianoKeys = {};
+      pianoElement.style.position = 'relative';
+      pianoElement.style.height = '112px';
+      pianoElement.style.display = 'flex';
+      pianoElement.style.alignItems = 'flex-end';
+
+      // C4 (60) to E6 (88)
+      const startMidi = 60;
+      const endMidi = 88;
+      
+      const containerWidth = Math.max(820, pianoElement.offsetWidth || 900);
+      const numWhiteKeys = 21; // C4 to E6 inclusive
+      const whiteKeyWidth = Math.floor((containerWidth - 18) / numWhiteKeys);
+      const blackKeyWidth = Math.floor(whiteKeyWidth * 0.58);
+
+      // Build all keys in order so we can position blacks accurately
+      const allKeys = [];
+      for (let m = startMidi; m <= endMidi; m++) {
+        allKeys.push(m);
+      }
+
+      let whiteCount = 0;
+
+      // First create and append all white keys
+      allKeys.forEach(midi => {
+        const isBlack = NOTE_STRINGS[midi % 12].includes('#');
+        if (isBlack) return;
+
+        const key = document.createElement('div');
+        key.className = `piano-key white flex-shrink-0 rounded-b-lg`;
+        key.style.width = whiteKeyWidth + 'px';
+        key.style.height = '106px';
+        key.style.marginRight = '1px';
+        key.style.zIndex = '1';
+
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = getNoteName(midi);
+        key.appendChild(label);
+
+        key.dataset.midi = midi;
+        pianoElement.appendChild(key);
+        pianoKeys[midi] = key;
+        makeKeyPlayable(key, midi);
+        whiteCount++;
+      });
+
+      // Now layer black keys on top with absolute positioning
+      // We will walk the white keys and insert blacks between the correct ones.
+      const blackPositions = {
+        1: 0,   // C#
+        3: 1,   // D#
+        6: 3,   // F#
+        8: 4,   // G#
+        10: 5   // A#
+      };
+
+      let currentWhiteIndex = 0;
+      const whites = Object.keys(pianoKeys).map(Number).sort((a,b) => a-b);
+
+      allKeys.forEach(midi => {
+        const pc = midi % 12;
+        if (!NOTE_STRINGS[pc].includes('#')) {
+          currentWhiteIndex++;
+          return;
+        }
+
+        const key = document.createElement('div');
+        key.className = `piano-key black absolute rounded-b-md`;
+        key.style.width = blackKeyWidth + 'px';
+        key.style.height = '65px';
+        key.style.zIndex = '20';
+        key.style.top = '4px';
+
+        // Find the white key index this black sits after
+        // whiteIndex is the number of white keys up to this point
+        const whiteIndexBefore = currentWhiteIndex - 1; // 0-based index of the white key before this black
+        
+        // left = (sum of previous white widths + their 1px margins) + offset inside the gap
+        const left = whiteIndexBefore * (whiteKeyWidth + 1) + Math.floor(whiteKeyWidth * 0.64);
+
+        key.style.left = left + 'px';
+
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = getNoteName(midi);
+        key.appendChild(label);
+
+        key.dataset.midi = midi;
+        pianoElement.appendChild(key);
+        pianoKeys[midi] = key;
+        makeKeyPlayable(key, midi);
+      });
+    }
+    
+    function makeKeyPlayable(key, midi) {
+      const startPlay = (e) => {
+        if (e) e.preventDefault();
+        
+        // Play ONLY on press, never on release
+        playNote(midi, 650);
+        key.classList.add('pressed');
+
+        // Pause mic briefly so virtual piano sound isn't detected as real playing
+        isPlayingReference = true;
+        setTimeout(() => {
+          isPlayingReference = false;
+        }, 750);
+      };
+
+      const stopPressed = () => {
+        key.classList.remove('pressed');
+      };
+
+      key.addEventListener('mousedown', startPlay);
+      key.addEventListener('touchstart', startPlay, { passive: false });
+
+      // Release visual state on mouse up, leave, or touch end
+      key.addEventListener('mouseup', stopPressed);
+      key.addEventListener('mouseleave', stopPressed);
+      key.addEventListener('touchend', stopPressed);
+      key.addEventListener('touchcancel', stopPressed);
+
+      // Also catch global mouse up (in case mouse is released after leaving the key)
+      const globalMouseUp = () => {
+        key.classList.remove('pressed');
+      };
+      key.addEventListener('mousedown', () => {
+        document.addEventListener('mouseup', globalMouseUp, { once: true });
+      }, { once: true });
+
+      // Make it clear it's interactive
+      key.style.cursor = 'pointer';
+    }
+
+    function updateKeyboard(detectedMidi, isGoodMatch) {
+      // Clear all states
+      Object.keys(pianoKeys).forEach(k => {
+        const el = pianoKeys[k];
+        if (!el) return;
+        el.classList.remove('target', 'detected-good', 'key-glow');
+        el.style.boxShadow = '';
+      });
+      
+      // Target highlight
+      const targetEl = pianoKeys[currentTargetMidi];
+      if (targetEl) {
+        targetEl.classList.add('target');
+      }
+      
+      // Detected highlight
+      if (detectedMidi && pianoKeys[detectedMidi]) {
+        const el = pianoKeys[detectedMidi];
+        if (currentTargetMidi === detectedMidi && isGoodMatch) {
+          el.classList.add('detected-good');
+        } else {
+          // keep slight indication
+          el.style.boxShadow = '0 0 0 2px rgba(251, 191, 36, 0.6)';
+        }
+      }
+    }
+    
+    // ==================== REFERENCE TONE ====================
+    let playingRefOsc = null;
+    
+    function playReferenceTone() {
+      if (isPlayingReference) return; // already playing reference
+
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      
+      // Stop previous
+      if (playingRefOsc) {
+        try { playingRefOsc.stop(); } catch(e){}
+        playingRefOsc = null;
+      }
+
+      // Temporarily ignore mic input while reference tone plays
+      isPlayingReference = true;
+      matchTime = 0;
+      updateMatchUI();
+
+      const statusEl = document.getElementById('match-status');
+      if (statusEl) {
+        statusEl.textContent = 'Playing reference tone...';
+        statusEl.className = 'mt-1 text-[10px] text-center text-blue-400';
+      }
+      
+      // Use the shared playNote function
+      playNote(currentTargetMidi, 950);
+      playingRefOsc = null; // not needed anymore
+
+      // Re-enable mic detection after the tone finishes
+      setTimeout(() => {
+        isPlayingReference = false;
+        matchTime = 0;
+        updateMatchUI();
+
+        const statusEl = document.getElementById('match-status');
+        if (statusEl) {
+          if (songMode) {
+            statusEl.textContent = 'Play the highlighted song note';
+            statusEl.className = 'mt-1 text-[10px] text-center text-slate-400';
+          } else {
+            statusEl.textContent = 'Hold the correct note steady';
+            statusEl.className = 'mt-1 text-[10px] text-center text-slate-400';
+          }
+        }
+      }, 1050);
+    }
+    
+    function playSuccessSound() {
+      if (!audioContext) return;
+      
+      const o = audioContext.createOscillator();
+      const g = audioContext.createGain();
+      const f = audioContext.createBiquadFilter();
+      
+      o.type = 'sine';
+      o.frequency.value = 780;
+      f.type = 'lowpass';
+      f.frequency.value = 1400;
+      
+      g.gain.value = 0.0001;
+      
+      o.connect(f);
+      f.connect(g);
+      g.connect(audioContext.destination);
+      
+      const t = audioContext.currentTime;
+      o.start(t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.3, t + 0.01);
+      g.gain.linearRampToValueAtTime(0.0001, t + 0.38);
+      
+      setTimeout(() => { try { o.stop(); } catch(e){} }, 420);
+    }
+
+    // Reusable function to play any note (used by virtual keyboard + reference)
+    function playNote(midi, duration = 800) {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const freq = frequencyFromNoteNumber(midi);
+
+      // Nice multi-oscillator "piano-like" sound
+      const masterGain = audioContext.createGain();
+      const filter = audioContext.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 2600;
+
+      const osc1 = audioContext.createOscillator();
+      osc1.type = 'sawtooth';
+      osc1.frequency.value = freq;
+
+      const osc2 = audioContext.createOscillator();
+      osc2.type = 'triangle';
+      osc2.frequency.value = freq * 2;
+
+      const osc3 = audioContext.createOscillator();
+      osc3.type = 'sine';
+      osc3.frequency.value = freq * 0.5;
+
+      const g1 = audioContext.createGain();
+      const g2 = audioContext.createGain();
+      const g3 = audioContext.createGain();
+
+      g1.gain.value = 0.28;
+      g2.gain.value = 0.16;
+      g3.gain.value = 0.12;
+
+      const env = audioContext.createGain();
+      env.gain.value = 0.001;
+
+      osc1.connect(g1);
+      osc2.connect(g2);
+      osc3.connect(g3);
+      g1.connect(env);
+      g2.connect(env);
+      g3.connect(env);
+      env.connect(filter);
+      filter.connect(masterGain);
+      masterGain.connect(audioContext.destination);
+
+      const now = audioContext.currentTime;
+      osc1.start(now);
+      osc2.start(now);
+      osc3.start(now);
+
+      env.gain.cancelScheduledValues(now);
+      env.gain.setValueAtTime(0.001, now);
+      env.gain.linearRampToValueAtTime(0.92, now + 0.012);
+
+      // Decay
+      const decayTime = duration / 1000;
+      masterGain.gain.value = 0.9;
+      env.gain.linearRampToValueAtTime(0.0001, now + decayTime);
+
+      setTimeout(() => {
+        try {
+          osc1.stop();
+          osc2.stop();
+          osc3.stop();
+        } catch (e) {}
+      }, duration + 200);
+    }
+    
+    // ==================== CHALLENGE MODE ====================
+    function toggleChallenge() {
+      if (challengeActive) {
+        endChallenge();
+      } else {
+        startNewChallenge();
+      }
+    }
+    
+    function startNewChallenge() {
+      if (songMode) {
+        exitSongMode(true);
+      }
+
+      // Make sure we have mic
+      if (!isListening) {
+        toggleMicrophone().then(() => {
+          // small delay then start
+          setTimeout(() => startNewChallenge(), 650);
+        });
+        return;
+      }
+      
+      // Reset challenge state
+      challengeActive = true;
+      challengeTimeLeft = 60;
+      challengeHits = 0;
+      challengeErrors = [];
+      challengeStartScore = score;
+      
+      // reset combo for fresh start
+      combo = 0;
+      
+      document.getElementById('challenge-btn').classList.add('hidden');
+      document.getElementById('end-challenge-btn').classList.remove('hidden');
+      document.getElementById('challenge-info').textContent = 'Match targets quickly!';
+      
+      // Give the player the first target
+      pickNewTarget();
+      matchTime = 0;
+      updateMatchUI();
+      updateStatsUI();
+      
+      // Timer
+      if (challengeInterval) clearInterval(challengeInterval);
+      challengeInterval = setInterval(() => {
+        if (!challengeActive) return;
+        challengeTimeLeft--;
+        document.getElementById('timer').textContent = challengeTimeLeft;
+        
+        if (challengeTimeLeft <= 0) {
+          endChallenge();
+        }
+      }, 1000);
+      
+      document.getElementById('timer').classList.add('!text-orange-400');
+    }
+    
+    function endChallenge(silent = false) {
+      if (!challengeActive) return;
+      
+      challengeActive = false;
+      clearInterval(challengeInterval);
+      challengeInterval = null;
+      
+      const finalScore = score;
+      const hits = challengeHits;
+      const maxCombo = combo;
+      
+      let avgError = 18;
+      if (challengeErrors.length > 0) {
+        avgError = Math.round(challengeErrors.reduce((a, b) => a + b, 0) / challengeErrors.length);
+      }
+      
+      document.getElementById('challenge-btn').classList.remove('hidden');
+      document.getElementById('end-challenge-btn').classList.add('hidden');
+      document.getElementById('challenge-info').textContent = 'Hit as many targets as possible';
+      document.getElementById('timer').textContent = '60';
+      document.getElementById('timer').classList.remove('!text-orange-400');
+      
+      // Save high score?
+      let isNewHigh = false;
+      if (finalScore > highScore) {
+        highScore = finalScore;
+        localStorage.setItem('pianoPulseHighScore', highScore);
+        isNewHigh = true;
+      }
+      
+      // Show modal
+      showChallengeModal(finalScore, hits, maxCombo, avgError, isNewHigh);
+    }
+    
+    function showChallengeModal(finalScore, hits, maxCombo, avgError, isNewHigh) {
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('modal-title').textContent = 'Challenge Complete!';
+      document.getElementById('modal-subtitle').textContent = `You played for 60 seconds`;
+      
+      document.getElementById('modal-score').textContent = finalScore;
+      document.getElementById('modal-hits').textContent = hits;
+      document.getElementById('modal-combo').textContent = maxCombo + '×';
+      document.getElementById('modal-error').textContent = avgError + '¢';
+      
+      const hsEl = document.getElementById('modal-highscore');
+      if (isNewHigh) {
+        hsEl.textContent = '★ NEW HIGH SCORE!';
+        hsEl.classList.remove('hidden');
+      } else {
+        hsEl.classList.add('hidden');
+      }
+    }
+    
+    let originalModalHTML = null;
+
+    function hideModal() {
+      const modal = document.getElementById('modal');
+      const card = modal.querySelector('.bg-slate-900');
+      
+      // Restore original modal content if we overwrote it
+      if (originalModalHTML && card && card.innerHTML.includes('Song Complete')) {
+        card.innerHTML = originalModalHTML;
+      }
+      
+      modal.classList.add('hidden');
+    }
+    
+    function updateToleranceFromSlider() {
+      // Already wired via inline oninput
+    }
+    
+    // ==================== RANGE BUTTON HELPERS ====================
+    function initRangeButtons() {
+      const btns = document.querySelectorAll('.range-btn');
+      btns.forEach((btn, i) => {
+        btn.setAttribute('data-preset', i);
+        btn.onclick = () => {
+          btns.forEach(b => b.classList.remove('!bg-blue-600', '!border-blue-600', 'active'));
+          btn.classList.add('!bg-blue-600', '!border-blue-600', 'active');
+          setRangePreset(i);
+        };
+      });
+      
+      // Activate default (C4–C6)
+      btns[1].classList.add('!bg-blue-600', '!border-blue-600', 'active');
+    }
+    
+    function initToleranceSlider() {
+      const slider = document.getElementById('tolerance-slider');
+      slider.value = toleranceCents;
+      document.getElementById('tolerance-value').textContent = toleranceCents;
+      
+      slider.addEventListener('input', () => {
+        toleranceCents = parseInt(slider.value);
+        document.getElementById('tolerance-value').textContent = toleranceCents;
+      });
+    }
+    
+    function initSharpsToggle() {
+      const toggle = document.getElementById('sharps-toggle');
+      toggle.addEventListener('change', () => {
+        updateAllowedNotes();
+      });
+    }
+    
+    // ==================== INITIALIZATION ====================
+    function initAllowedNotes() {
+      allowedNotes = [];
+      // Default C4–C6 including black keys
+      for (let m = 60; m <= 84; m++) {
+        allowedNotes.push(m);
+      }
+    }
+    
+    function initPiano() {
+      // Build after layout settles
+      setTimeout(() => {
+        buildPianoKeyboard();
+        
+        // Set initial target
+        currentTargetMidi = 60; // Start at middle C
+        updateTargetUI();
+        updateKeyboard(null, false);
+      }, 60);
+      
+      // Rebuild on resize for correct positioning
+      window.addEventListener('resize', () => {
+        const current = currentTargetMidi;
+        buildPianoKeyboard();
+        currentTargetMidi = current;
+        updateTargetUI();
+      });
+    }
+    
+    function resetSession() {
+      if (songMode) {
+        exitSongMode(true);
+      }
+      
+      score = 0;
+      combo = 0;
+      totalHits = 0;
+      totalAttempts = 0;
+      matchTime = 0;
+      recentHits = [];
+      
+      document.getElementById('score').textContent = '0';
+      document.getElementById('combo').textContent = '0×';
+      document.getElementById('accuracy').textContent = '—';
+      document.getElementById('match-bar').style.width = '0%';
+      document.getElementById('match-pct').textContent = '0%';
+      
+      renderRecentHits();
+      
+      if (challengeActive) {
+        endChallenge(true);
+      }
+      
+      if (!songMode) {
+        pickNewTarget();
+      }
+    }
+    
+    function initFirstTarget() {
+      // Start on middle C
+      currentTargetMidi = 60;
+      updateTargetUI();
+    }
+    
+    function showTips() {
+      const msg = `Best accuracy tips:
+      
+• Position your device’s microphone 30-70 cm from the piano (near the strings or sound holes)
+• Play notes cleanly and hold them for at least half a second
+• Middle range (C4–C6) works best for built-in mics
+• Use headphones if playing reference tones to avoid feedback
+• Reduce background noise and reverb if possible
+• Play with moderate volume — too soft is harder to detect
+
+PianoPulse is a fun way to train note recognition, intonation awareness, and finger-to-ear connection.`;
+      
+      alert(msg);
+    }
+    
+    function init() {
+      // Tailwind script already included
+      initAllowedNotes();
+      initRangeButtons();
+      initToleranceSlider();
+      initSharpsToggle();
+      initPiano();
+      initFirstTarget();
+      
+      // Initial UI values
+      document.getElementById('score').textContent = score;
+      document.getElementById('combo').textContent = '0×';
+      document.getElementById('accuracy').textContent = '—';
+      
+      renderRecentHits();
+      
+      // Seed first range preset (C4-C6)
+      const preset1 = document.querySelector('.range-btn[data-preset="1"]');
+      if (preset1) preset1.classList.add('!bg-blue-600', '!border-blue-600', 'active');
+      
+      // Set a friendly first target
+      setTimeout(() => {
+        if (currentTargetMidi === 60) {
+          // already good
+        }
+      }, 200);
+      
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement.tagName === 'BODY') {
+          e.preventDefault();
+          if (songMode) {
+            // cycle or do nothing
+          } else {
+            newTarget();
+          }
+        }
+        if (e.key.toLowerCase() === 'r') {
+          e.preventDefault();
+          playReferenceTone();
+        }
+        if (e.key === ' ' && !challengeActive && !songMode) {
+          e.preventDefault();
+          newTarget();
+        }
+        if ((e.key === 'Enter' || e.key === 'c') && !challengeActive && !songMode) {
+          e.preventDefault();
+          startNewChallenge();
+        }
+        if (e.key.toLowerCase() === 's' && document.activeElement.tagName === 'BODY') {
+          e.preventDefault();
+          showSongSelector();
+        }
+      });
+      
+      // Welcome message in console for devs
+      console.log('%c[PianoPulse] Ready. Enable mic and start playing!', 'color:#64748b');
+      
+      // Optional auto-select first good range
+      setRangePreset(1);
+    }
+    
+    // Boot
+    window.onload = init;
+  </script>
+</body>
+</html>
