@@ -567,16 +567,58 @@
         notes: ["E4","E4","E4","E4","E4","E4","E4","G4","C4","D4","E4","F4","F4","F4","F4","F4","E4","E4","E4","E4","D4","D4","E4","D4","G4"]
       },
       {
+        id: "row",
+        title: "Row Row Row Your Boat",
+        difficulty: "Beginner",
+        notes: ["C4","C4","C4","D4","E4","E4","D4","E4","F4","G4","C5","C5","C5","G4","G4","G4","E4","E4","E4","C4","C4","C4","G4","F4","E4","D4","C4"]
+      },
+      {
+        id: "hotcross",
+        title: "Hot Cross Buns",
+        difficulty: "Beginner",
+        notes: ["E4","D4","C4","E4","D4","C4","C4","C4","C4","D4","D4","D4","D4","E4","D4","C4"]
+      },
+      {
         id: "birthday",
         title: "Happy Birthday",
         difficulty: "Intermediate",
-        notes: ["C4","C4","D4","C4","F4","E4","C4","C4","D4","C4","G4","F4","C4","C4","C5","A4","F4","E4","D4","Bb4","Bb4","A4","F4","G4","F4"]
+        notes: ["C4","C4","D4","C4","F4","E4","C4","C4","D4","C4","G4","F4","C4","C4","C5","A4","F4","E4","D4","A#4","A#4","A4","F4","G4","F4"]
       },
       {
         id: "ode",
         title: "Ode to Joy",
         difficulty: "Intermediate",
         notes: ["E4","E4","F4","G4","G4","F4","E4","D4","C4","C4","D4","E4","E4","D4","D4","E4","E4","F4","G4","G4","F4","E4","D4","C4","C4","D4","E4","D4","C4","C4"]
+      },
+      {
+        id: "amazing",
+        title: "Amazing Grace",
+        difficulty: "Intermediate",
+        notes: ["C4","E4","G4","A4","G4","E4","C4","E4","G4","A4","G4","E4","C4","G4","E4","D4","C4"]
+      },
+      {
+        id: "oldmac",
+        title: "Old MacDonald Had a Farm",
+        difficulty: "Intermediate",
+        notes: ["C4","C4","C4","G4","A4","A4","G4","E4","E4","D4","D4","C4","G4","C4","C4","C4","G4","A4","A4","G4","E4","E4","D4","D4","C4"]
+      },
+      {
+        id: "fur",
+        title: "Für Elise",
+        difficulty: "Expert",
+        notes: ["E5","D#5","E5","D#5","E5","B4","D5","C5","A4","C5","E5","A4","B4","E5","G#4","B4","C5","E5","E4","E5","D#5","E5","D#5","E5","B4","D5","C5","A4","C5","E5","A4","B4","E5","C5","B4","A4"]
+      },
+      {
+        id: "fifth",
+        title: "Beethoven's 5th (Fate)",
+        difficulty: "Expert",
+        notes: ["G4","G4","G4","D#4","F4","F4","F4","D4","G4","G4","G4","D#4","A#4","A#4","A#4","G4","D#4","D#4","D#4","C4","F4","F4","F4","D4"]
+      },
+      {
+        id: "canon",
+        title: "Pachelbel's Canon",
+        difficulty: "Expert",
+        notes: ["D5","A4","B4","F#4","G4","D4","G4","A4","D5","A4","B4","F#4","G4","D4","G4","A4","D5","F#4","A4","D5","A4","F#4","D5","A4"]
       }
     ];
 
@@ -1588,22 +1630,36 @@
             <button onclick="document.getElementById('song-selector').remove()" class="text-slate-400 hover:text-white">✕</button>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
       `;
 
+      // Group songs by difficulty
+      const difficulties = ["Beginner", "Intermediate", "Expert"];
+      const grouped = {};
+      difficulties.forEach(d => grouped[d] = []);
       SONGS.forEach(song => {
-        const completed = songCompleted.includes(song.id) ? '<span class="text-emerald-400 text-xs">✓ Completed</span>' : '';
-        html += `
-          <div onclick="document.getElementById('song-selector').remove(); startSong('${song.id}')" 
-               class="cursor-pointer bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-blue-600 transition rounded-2xl p-4">
-            <div class="font-semibold">${song.title}</div>
-            <div class="flex justify-between text-sm mt-1">
-              <span class="text-slate-400">${song.difficulty}</span>
-              ${completed}
+        if (!grouped[song.difficulty]) grouped[song.difficulty] = [];
+        grouped[song.difficulty].push(song);
+      });
+
+      difficulties.forEach(diff => {
+        if (grouped[diff].length === 0) return;
+        html += `<div class="mb-4"><div class="text-xs uppercase tracking-widest text-slate-500 mb-2 pl-1">${diff}</div>`;
+        grouped[diff].forEach(song => {
+          const completed = songCompleted.includes(song.id) ? '<span class="text-emerald-400 text-xs">✓ Completed</span>' : '';
+          html += `
+            <div onclick="document.getElementById('song-selector').remove(); startSong('${song.id}')" 
+                 class="cursor-pointer bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-blue-600 transition rounded-2xl p-4 mb-2">
+              <div class="font-semibold">${song.title}</div>
+              <div class="flex justify-between text-sm mt-1">
+                <span class="text-slate-400">${song.difficulty}</span>
+                ${completed}
+              </div>
+              <div class="mt-2 text-xs text-blue-400">Click to start →</div>
             </div>
-            <div class="mt-2 text-xs text-blue-400">Click to start →</div>
-          </div>
-        `;
+          `;
+        });
+        html += `</div>`;
       });
 
       html += `</div></div>`;
