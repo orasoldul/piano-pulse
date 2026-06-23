@@ -1,5 +1,9 @@
 # PianoPulse 🎹
 
+<p align="center">
+  <img src="assets/screenshot.jpg" alt="PianoPulse screenshot showing the live interface with target note, virtual piano keyboard, stats, and challenge mode" width="100%">
+</p>
+
 **➡️ [Try the live demo](https://orasoldul.github.io/piano-pulse) — no install needed, works in any modern browser**
 
 A fun, browser-based piano training game that listens to your microphone and gives you real-time feedback on your playing.
