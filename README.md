@@ -1,15 +1,19 @@
 # PianoPulse 🎹
 
+**➡️ [Try the live demo](https://orasoldul.github.io/piano-pulse) — no install needed, works in any modern browser**
+
 A fun, browser-based piano training game that listens to your microphone and gives you real-time feedback on your playing.
 
-## How to use
+## How to use (live version)
 
-1. Open `index.html` in **Chrome** or **Edge** (recommended).
+1. Open the [live demo](https://orasoldul.github.io/piano-pulse) in **Chrome** or **Edge** (recommended).
 2. Click **Enable Mic** and allow microphone access.
 3. Place your laptop / phone mic about 30–70 cm from the piano (pointing at the strings or soundboard).
 4. Play notes on your piano.
 5. Watch the big **Target Note** and try to match it.
 6. Press **Start 60s Challenge** for a proper game.
+
+**Tip:** The live version (HTTPS) usually gives the best microphone experience.
 
 ## What it trains
 
@@ -60,7 +64,9 @@ Your mic listens and advances automatically when you play correctly!
 
 ## Running locally (optional)
 
-If file:// mode has issues:
+Prefer the [live demo](https://orasoldul.github.io/piano-pulse) for the easiest experience.
+
+If you want to run it locally:
 
 ```powershell
 # From the piano-pulse folder
@@ -68,12 +74,20 @@ python -m http.server 8000
 # Then open http://localhost:8000 in your browser
 ```
 
-Or use any simple static server.
+Or use any simple static server (e.g. `npx serve .`).
 
 ## Tech
 
 - Pure HTML + Tailwind + vanilla JavaScript
 - Web Audio API + Analyser + autocorrelation pitch detection (based on proven ACF2+ implementation)
 - No backend, no tracking, everything runs in your browser
+
+## Contributing
+
+Found a bug or have an idea? Feel free to open an issue or pull request.
+
+If you enjoy PianoPulse, consider starring the repo — it helps others discover it!
+
+---
 
 Have fun practicing! The more you play, the better your note recognition and control will become.
